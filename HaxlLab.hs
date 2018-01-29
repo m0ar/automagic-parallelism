@@ -1,51 +1,47 @@
-{-# LANGUAGE GADTs
-           , TypeFamilies
-           , MultiParamTypeClasses
-           , StandaloneDeriving
-           , DeriveDataTypeable
-           , OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
 
-module HaxlLab where
+module Main where
 
 import Haxl.Core
 import Data.Hashable
+import Data.IORef
 import Control.Monad
+import Control.Monad.Par
+import Control.Monad.Par.Combinator
+import Control.DeepSeq (rnf)
+import System.IO.Unsafe (unsafePerformIO)
+import Data.List (foldl')
 
-data HeavyA a where
-  MockA :: HeavyA Integer
+data Heavy a where
+    MockA :: Heavy Integer
+    MockB :: Heavy Integer
 
-data HeavyB a where
-  MockB :: HeavyB Integer
+instance NFData (IO ()) where
+  rnf = unsafePerformIO
 
-deriving instance Show (HeavyA a)
-deriving instance Eq   (HeavyA a)
-deriving instance Show (HeavyB a)
-deriving instance Eq   (HeavyB a)
-
-instance DataSource () HeavyA where
-  fetch _ _ _ reqs = SyncFetch $
-    forM_ reqs $ \(BlockedFetch req var) -> runHeavyA req var
-
-instance DataSource () HeavyB where
-  fetch _ _ _ reqs = SyncFetch $
-    forM_ reqs $ \(BlockedFetch req var) -> runHeavyB req var
+instance DataSource () Heavy where
+  fetch _ _ _ reqs = SyncFetch $ runPar $ do
+      parMapM (\(BlockedFetch req var) -> return $! runHeavy req var) reqs
+      pure (pure ())
 
 
-runHeavyA :: HeavyA a -> ResultVar a -> IO ()
-runHeavyA MockA var = do
-  let !n = sum [1..20000000]
+runHeavy :: Heavy a -> ResultVar a -> IO ()
+runHeavy MockA var = do
+  let !n = foldl' (+) 0 [1..100000000]
   putSuccess var n
   putStrLn "MockA finished."
-
-runHeavyB :: HeavyB a -> ResultVar a -> IO ()
-runHeavyB MockB var = do
-  let !n = sum [1..20000000]
+runHeavy MockB var = do
+  let !n = foldl' (+) 0 [2..100000000]
   putSuccess var n
   putStrLn "MockB finished."
 
-
 initialState :: StateStore
-initialState = stateSet NoStateB $ stateSet NoStateA stateEmpty
+initialState = stateSet NoState stateEmpty
 
 main :: IO ()
 main = do
@@ -54,25 +50,20 @@ main = do
   putStrLn $ "result = " ++ show summed
 
 
-instance StateKey HeavyA where
-  data State HeavyA = NoStateA
+-- Required & not interesting instances below
 
-instance StateKey HeavyB where
-  data State HeavyB = NoStateB
+deriving instance Show (Heavy a)
+deriving instance Eq   (Heavy a)
 
-instance Hashable (HeavyA a) where
+instance StateKey Heavy where
+  data State Heavy = NoState
+
+instance Hashable (Heavy a) where
     hashWithSalt salt _ =
       hashWithSalt salt ()
-instance Hashable (HeavyB a) where
-    hashWithSalt salt _ =
-      hashWithSalt salt ()
 
-instance DataSourceName HeavyA where
-  dataSourceName _ = "HeavyA"
-instance DataSourceName HeavyB where
-  dataSourceName _ = "HeavyB"
+instance DataSourceName Heavy where
+  dataSourceName _ = "Heavy"
 
-instance ShowP HeavyA where
-  showp _ = "HeavyA"
-instance ShowP HeavyB where
-  showp _ = "HeavyB"
+instance ShowP Heavy where
+  showp _ = "Heavy"
