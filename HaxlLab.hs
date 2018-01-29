@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ApplicativeDo #-}
 
 import Haxl.Core
 import Data.Hashable (Hashable (..))
@@ -17,18 +18,28 @@ data Heavy a where
   MockA :: Heavy Integer
   MockB :: Heavy Integer
 
--- By design of Haxl we don't care about the order our effects
--- occur, other than for the dependencies which the library
--- already does in batches.
-instance NFData (IO ()) where
-  rnf = unsafePerformIO
-
+-- Perform all requests to the data source in parallel using
+-- the Par monad. Haxl will batch all independent requests to
+-- this data source together in the variable reqs.
 instance DataSource () Heavy where
   fetch _ _ _ reqs = SyncFetch $ runPar $ do
     parMapM (\(BlockedFetch req var) ->
       return $ runHeavy req var) reqs
+    -- SyncFetch constructor requires a result of type IO (),
+    -- but results are passed through an IORef in the runner
     pure (pure ())
 
+-- By design of Haxl we don't care about the order our effects
+-- occur, other than for the dependencies which the library
+-- already does in batches. Therefore, it is not a problem to
+-- perform our IO _now_, independently of the rest of the IO
+-- operations.
+instance NFData (IO ()) where
+  rnf = unsafePerformIO
+
+
+-- Defines the semantics of our two actual "data source"
+-- operations.
 runHeavy :: Heavy a -> ResultVar a -> IO ()
 runHeavy MockA var = do
   let !n = foldl' (+) 0 [1..100000000]
@@ -39,12 +50,18 @@ runHeavy MockB var = do
   putSuccess var n
   putStrLn "MockB finished."
 
+-- Initiates an (empty) state and runs a Haxl computation.
+-- Thanks to ApplicativeDo, the two dataFetch calls desugars
+-- to applicative operations because they have no dependency,
+-- and are performed concurrently by the Haxl framework.
 main :: IO ()
 main = do
   env <- initEnv initialState ()
-  summed <- runHaxl env $ (+) <$> dataFetch MockA
-                             <*> dataFetch MockB
-  putStrLn $ "result = " ++ show summed
+  summed <- runHaxl env $ do
+    x <- dataFetch MockA
+    y <- dataFetch MockB
+    return $ x + y
+  putStrLn $ "Result = " ++ show summed
 
 
 initialState :: StateStore
