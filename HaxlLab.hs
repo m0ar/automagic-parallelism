@@ -26,7 +26,8 @@ instance DataSource () Heavy where
     parMapM (\(BlockedFetch req var) ->
       return $ runHeavy req var) reqs
     -- SyncFetch constructor requires a result of type IO (),
-    -- but results are passed through an IORef in the runner
+    -- hence the double pure. This does not mean we cannot return
+    -- data; results are passed through an IORef in runHeavy.
     pure (pure ())
 
 -- By design of Haxl we don't care about the order our effects
@@ -39,7 +40,8 @@ instance NFData (IO ()) where
 
 
 -- Defines the semantics of our two actual "data source"
--- operations.
+-- operations. This can be any type of computation, enabling
+-- concurrency of other things than regular data fetching.
 runHeavy :: Heavy a -> ResultVar a -> IO ()
 runHeavy MockA var = do
   let !n = foldl' (+) 0 [1..100000000]
