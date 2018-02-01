@@ -6,6 +6,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ApplicativeDo #-}
 
+module HaxlLab (mainHaxl) where
+
 import Haxl.Core
 import Data.Hashable (Hashable (..))
 import Control.Monad.Par (runPar)
@@ -56,8 +58,8 @@ runHeavy MockB var = do
 -- Thanks to ApplicativeDo, the two dataFetch calls desugars
 -- to applicative operations because they have no dependency,
 -- and are performed concurrently by the Haxl framework.
-main :: IO ()
-main = do
+mainHaxl :: IO ()
+mainHaxl = do
   env <- initEnv initialState ()
   summed <- runHaxl env $ do
     x <- dataFetch MockA
