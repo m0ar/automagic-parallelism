@@ -24,6 +24,13 @@ dependencies:
 library:
   source-dirs: 
     - src 
+  dependencies:
+    - haxl
+    - hashable
+    - monad-par
+    - parallel
+    - deepseq
+    - monad-par-extras
   
 executables:
   stack-exe:
