@@ -1,1 +1,1 @@
-# automagic-parallelism
+# stack
