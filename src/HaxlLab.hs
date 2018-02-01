@@ -46,11 +46,11 @@ instance NFData (IO ()) where
 -- concurrency of other things than regular data fetching.
 runHeavy :: Heavy a -> ResultVar a -> IO ()
 runHeavy MockA var = do
-  let !n = foldl' (+) 0 [1..100000000]
+  let !n = foldl' (+) 0 [1..1000000000] :: Integer
   putSuccess var n
   putStrLn "MockA finished."
 runHeavy MockB var = do
-  let !n = foldl' (+) 0 [1..100000000]
+  let !n = foldl' (+) 0 [1..1000000000] :: Integer
   putSuccess var n
   putStrLn "MockB finished."
 
