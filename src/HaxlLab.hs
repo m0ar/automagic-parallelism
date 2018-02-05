@@ -5,6 +5,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE BangPatterns #-}
 
 module HaxlLab (mainHaxl) where
 
