@@ -8,7 +8,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# OPTIONS_GHC -foptimal-applicative-do #-}
 
-module HaxlLab (main, mainHaxl) where
+module HaxlLab2 ( mainHaxl) where
 
 import Haxl.Core
 import Data.Hashable (Hashable (..))
@@ -90,10 +90,6 @@ dataFetchMockC = dataFetch MockC
 
 dataFetchMockD :: Integer -> GenHaxl () Integer
 dataFetchMockD _ = dataFetch MockD
-
-
-main :: IO ()
-main = mainHaxl
 
 mainHaxl :: IO ()
 mainHaxl = do
