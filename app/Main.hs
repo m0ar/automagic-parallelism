@@ -1,7 +1,7 @@
 
 module Main where
 
-import HaxlLab2
+import HaxlLab
 
 main :: IO ()
 main = mainHaxl
